@@ -1,0 +1,545 @@
+import "fonts/Inter-Light.ttf";
+import "fonts/Inter-Regular.ttf";
+
+global Palette {
+    out property <color> paper: #F2EEE6;
+    out property <color> ink: #2B2622;
+    // Ripe and leaf match the fills in the tomato SVG.
+    out property <color> ripe: #cb2f23;
+    out property <color> turning: #E8892B;
+    out property <color> unripe: #8DB255;
+    out property <color> leaf: #4b7c3a;
+    out property <color> leaf-dark: #3B6A2C;
+}
+
+// One layer of the tomato, filling its parent and showing the art's square viewbox.
+component ArtPath inherits Path {
+    in property <float> art-x;
+    in property <float> art-y;
+    in property <float> art-size;
+
+    width: 100%;
+    height: 100%;
+    viewbox-x: self.art-x;
+    viewbox-y: self.art-y;
+    viewbox-width: self.art-size;
+    viewbox-height: self.art-size;
+}
+
+// A tiny round icon button drawn with a 12×12 path.
+component Icon inherits Rectangle {
+    in property <string> commands;
+    in property <bool> filled;
+    in property <bool> stroked: true;
+    callback clicked;
+
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    background: ta.has-hover ? Palette.ink.transparentize(0.93) : transparent;
+
+    Path {
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        width: 12px;
+        height: 12px;
+        viewbox-width: 12;
+        viewbox-height: 12;
+        commands: root.commands;
+        stroke: root.stroked ? Palette.ink : transparent;
+        stroke-width: 1.3px;
+        fill: root.filled ? Palette.ink : transparent;
+    }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Steps once on press, then keeps stepping while held.
+component RoundButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> enabled: true;
+    callback step;
+
+    property <bool> repeating;
+
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    background: ta.has-hover && root.enabled ? Palette.ink.transparentize(0.9) : Palette.ink.transparentize(0.95);
+    opacity: root.enabled ? 1 : 0.35;
+
+    Text {
+        text: root.label;
+        color: Palette.ink;
+        font-size: 14px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    ta := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down && e.button == PointerEventButton.left {
+                root.repeating = false;
+                root.step();
+            }
+        }
+    }
+
+    Timer {
+        interval: root.repeating ? 60ms : 400ms;
+        running: ta.pressed && root.enabled;
+        triggered => {
+            root.repeating = true;
+            root.step();
+        }
+    }
+}
+
+component Stepper inherits HorizontalLayout {
+    in property <string> label;
+    in property <string> unit: "min";
+    in property <int> minimum: 1;
+    in property <int> maximum: 60;
+    in-out property <int> value;
+
+    height: 26px;
+    spacing: 6px;
+    alignment: stretch;
+
+    changed value => { input.text = root.value; }
+
+    pure function parse(s: string) -> int { round(s.to-float()) }
+
+    // Applies whatever was typed, clamped, and shows the result.
+    function commit() {
+        if input.text.is-float() {
+            root.value = max(root.minimum, min(root.maximum, root.parse(input.text)));
+        }
+        input.text = root.value;
+    }
+
+    Text {
+        text: root.label;
+        color: Palette.ink;
+        font-size: 12px;
+        vertical-alignment: center;
+        horizontal-stretch: 1;
+    }
+    RoundButton {
+        y: 2px;
+        label: "−";
+        enabled: root.value > root.minimum;
+        step => { root.value = max(root.minimum, root.value - 1); }
+    }
+    // The number is editable; it takes effect as soon as it's in range.
+    Rectangle {
+        width: 46px;
+        border-radius: 5px;
+        background: input.has-focus ? Palette.ink.transparentize(0.92)
+            : cell.has-hover ? Palette.ink.transparentize(0.96) : transparent;
+
+        cell := TouchArea {
+            mouse-cursor: text;
+            clicked => { input.focus(); }
+        }
+        HorizontalLayout {
+            alignment: center;
+            spacing: 3px;
+
+            input := TextInput {
+                width: 18px;
+                text: root.value;
+                input-type: number;
+                color: Palette.ink;
+                selection-background-color: Palette.ink.transparentize(0.8);
+                font-size: 12px;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+                edited => {
+                    if self.text.is-float() && root.parse(self.text) >= root.minimum {
+                        root.value = min(root.maximum, root.parse(self.text));
+                    }
+                }
+                accepted => {
+                    root.commit();
+                    self.clear-focus();
+                }
+                changed has-focus => {
+                    if self.has-focus {
+                        self.select-all();
+                    } else {
+                        root.commit();
+                    }
+                }
+            }
+            Text {
+                text: root.unit;
+                color: Palette.ink;
+                font-size: 12px;
+                vertical-alignment: center;
+            }
+        }
+    }
+    RoundButton {
+        y: 2px;
+        label: "+";
+        enabled: root.value < root.maximum;
+        step => { root.value = min(root.maximum, root.value + 1); }
+    }
+}
+
+component VolumeSlider inherits Rectangle {
+    in property <color> accent;
+    in-out property <int> value; // 0–100
+
+    property <length> knob: 10px;
+
+    function set-from(x: length) {
+        root.value = max(0, min(100, round((x - root.knob / 2) / (root.width - root.knob) * 100)));
+    }
+
+    Rectangle {
+        x: root.knob / 2;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - root.knob;
+        height: 3px;
+        border-radius: 1.5px;
+        background: Palette.ink.transparentize(0.85);
+    }
+    Rectangle {
+        x: root.knob / 2;
+        y: (parent.height - self.height) / 2;
+        width: (parent.width - root.knob) * root.value / 100;
+        height: 3px;
+        border-radius: 1.5px;
+        background: root.accent;
+    }
+    Rectangle {
+        x: (parent.width - root.knob) * root.value / 100;
+        y: (parent.height - self.height) / 2;
+        width: root.knob;
+        height: root.knob;
+        border-radius: root.knob / 2;
+        background: root.accent;
+    }
+
+    TouchArea {
+        mouse-cursor: pointer;
+        pointer-event(e) => {
+            if e.kind == PointerEventKind.down {
+                root.set-from(self.mouse-x);
+            }
+        }
+        moved => { root.set-from(self.mouse-x); }
+        scroll-event(e) => {
+            root.value = max(0, min(100, root.value + (e.delta-y > 0 ? 5 : -5)));
+            accept
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    // Artwork from the tomato SVG, in its own coordinates; Rust supplies a square viewbox around it.
+    in property <string> body-path;
+    in property <string> ghost-path;
+    in property <string> crown-path;
+    in property <float> art-x;
+    in property <float> art-y;
+    in property <float> art-size: 1;
+
+    // Timer state.
+    in property <int> phase; // 0 focus, 1 short break, 2 long break
+    in property <bool> running;
+    in property <[string]> time-chars: ["2", "5", ":", "0", "0"];
+    in property <int> completed;
+
+    // Settings.
+    in-out property <int> focus-min: 25;
+    in-out property <int> short-break-min: 5;
+    in-out property <int> long-break-min: 15;
+    in-out property <int> sessions: 4;
+    in-out property <bool> sound: true;
+    in-out property <int> volume: 80;
+    in-out property <bool> pinned;
+    in-out property <bool> settings-open;
+
+    callback toggle();
+    callback reset();
+    callback skip();
+    callback quit();
+    callback settings-done();
+    callback pin-changed();
+    callback preview-sound();
+
+    title: "Pomodoro";
+    width: 260px;
+    height: 260px;
+    no-frame: true;
+    background: transparent;
+    always-on-top: root.pinned;
+    default-font-family: "Inter";
+    default-font-weight: 300;
+
+    property <color> fruit: root.phase == 0 ? Palette.ripe : root.phase == 1 ? Palette.turning : Palette.unripe;
+    property <color> leaf: root.phase == 2 ? Palette.leaf-dark : Palette.leaf;
+    animate fruit, leaf { duration: 700ms; easing: ease-in-out; }
+
+    Rectangle {
+        border-radius: 22px;
+        background: Palette.paper;
+        clip: true;
+
+        hover := TouchArea {
+            WindowMoveArea {
+                // The tomato, kept below the top edge of the corner icons' glyphs (y = 18px).
+                Rectangle {
+                    x: 55px;
+                    y: 16px;
+                    width: 150px;
+                    height: 150px;
+
+                    ArtPath {
+                        art-x: root.art-x;
+                        art-y: root.art-y;
+                        art-size: root.art-size;
+                        commands: root.ghost-path;
+                        fill: root.fruit.transparentize(0.86);
+                    }
+                    if root.body-path != "": ArtPath {
+                        art-x: root.art-x;
+                        art-y: root.art-y;
+                        art-size: root.art-size;
+                        commands: root.body-path;
+                        fill: root.fruit;
+                    }
+                    ArtPath {
+                        art-x: root.art-x;
+                        art-y: root.art-y;
+                        art-size: root.art-size;
+                        commands: root.crown-path;
+                        fill: root.leaf;
+                    }
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => { root.toggle(); }
+                        double-clicked => { root.reset(); }
+                    }
+                }
+
+                // Remaining time, in fixed-width cells so the digits don't jitter.
+                HorizontalLayout {
+                    y: 184px;
+                    height: 34px;
+                    alignment: center;
+                    opacity: root.running ? 0.85 : 0.45;
+                    animate opacity { duration: 250ms; }
+
+                    for ch in root.time-chars: Text {
+                        width: ch == ":" ? 9px : 15px;
+                        text: ch;
+                        color: Palette.ink;
+                        font-size: 24px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                // Progress toward the long break.
+                HorizontalLayout {
+                    y: 226px;
+                    height: 6px;
+                    spacing: 8px;
+                    alignment: center;
+
+                    for i in root.sessions: Rectangle {
+                        width: 6px;
+                        border-radius: 3px;
+                        background: i < root.completed ? Palette.ink.transparentize(0.25) : Palette.ink.transparentize(0.85);
+                        animate background { duration: 400ms; }
+                    }
+                }
+
+                // Hover controls.
+                Rectangle {
+                    opacity: hover.has-hover && !root.settings-open ? 1 : 0;
+                    animate opacity { duration: 180ms; }
+
+                    Icon {
+                        x: 12px;
+                        y: 12px;
+                        // A small ring; filled while pinned on top.
+                        commands: "M 2 6 A 4 4 0 1 1 10 6 A 4 4 0 1 1 2 6 Z";
+                        filled: root.pinned;
+                        clicked => {
+                            root.pinned = !root.pinned;
+                            root.pin-changed();
+                        }
+                    }
+                    Icon {
+                        x: parent.width - self.width - 12px;
+                        y: 12px;
+                        commands: "M 2.5 2.5 L 9.5 9.5 M 9.5 2.5 L 2.5 9.5";
+                        clicked => { root.quit(); }
+                    }
+                    Icon {
+                        x: 12px;
+                        y: parent.height - self.height - 12px;
+                        commands: "M 2 2.5 L 5.5 6 L 2 9.5 M 6.5 2.5 L 10 6 L 6.5 9.5";
+                        clicked => { root.skip(); }
+                    }
+                    Icon {
+                        x: parent.width - self.width - 12px;
+                        y: parent.height - self.height - 12px;
+                        commands: "M 1.2 6 A 0.8 0.8 0 1 1 2.8 6 A 0.8 0.8 0 1 1 1.2 6 Z M 5.2 6 A 0.8 0.8 0 1 1 6.8 6 A 0.8 0.8 0 1 1 5.2 6 Z M 9.2 6 A 0.8 0.8 0 1 1 10.8 6 A 0.8 0.8 0 1 1 9.2 6 Z";
+                        filled: true;
+                        stroked: false;
+                        clicked => { root.settings-open = true; }
+                    }
+                }
+            }
+        }
+
+        // Settings sheet, slides up over the tomato.
+        Rectangle {
+            y: root.settings-open ? 0 : root.height;
+            animate y { duration: 320ms; easing: ease-out; }
+            background: Palette.paper;
+
+            // Holds focus when no field is being edited, so typed text commits.
+            idle-focus := FocusScope { }
+
+            // Behind the controls, so empty space drags the window without stealing slider drags.
+            WindowMoveArea {
+                // Swallow clicks so they don't reach the tomato underneath.
+                TouchArea {
+                    clicked => { idle-focus.focus(); }
+                }
+            }
+
+            VerticalLayout {
+                padding: 20px;
+                padding-top: 18px;
+                spacing: 6px;
+
+                Text {
+                    text: "Settings";
+                    color: Palette.ink;
+                    font-size: 15px;
+                    font-weight: 400;
+                }
+                Rectangle { height: 4px; }
+                Stepper {
+                    label: "Focus";
+                    minimum: 1;
+                    maximum: 90;
+                    value <=> root.focus-min;
+                }
+                Stepper {
+                    label: "Short break";
+                    minimum: 1;
+                    maximum: 30;
+                    value <=> root.short-break-min;
+                }
+                Stepper {
+                    label: "Long break";
+                    minimum: 1;
+                    maximum: 60;
+                    value <=> root.long-break-min;
+                }
+                Stepper {
+                    label: "Long break after";
+                    unit: "×";
+                    minimum: 2;
+                    maximum: 8;
+                    value <=> root.sessions;
+                }
+                HorizontalLayout {
+                    height: 26px;
+                    spacing: 6px;
+                    Text {
+                        text: "Sound";
+                        color: Palette.ink;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+                    VolumeSlider {
+                        horizontal-stretch: 1;
+                        accent: root.fruit;
+                        value <=> root.volume;
+                        opacity: root.sound ? 1 : 0.4;
+                        animate opacity { duration: 160ms; }
+                    }
+                    // Play a preview of the chime at the chosen volume.
+                    Icon {
+                        y: 1px;
+                        commands: "M 3.5 2 L 10 6 L 3.5 10 Z";
+                        filled: true;
+                        stroked: false;
+                        clicked => { root.preview-sound(); }
+                    }
+                    // Pill switch.
+                    Rectangle {
+                        y: 5px;
+                        width: 30px;
+                        height: 16px;
+                        border-radius: 8px;
+                        background: root.sound ? root.fruit : Palette.ink.transparentize(0.85);
+                        animate background { duration: 160ms; }
+
+                        Rectangle {
+                            x: root.sound ? parent.width - self.width - 2px : 2px;
+                            y: 2px;
+                            width: 12px;
+                            height: 12px;
+                            border-radius: 6px;
+                            background: Palette.paper;
+                            animate x { duration: 160ms; easing: ease-in-out; }
+                        }
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => { root.sound = !root.sound; }
+                        }
+                    }
+                }
+                Rectangle { vertical-stretch: 1; }
+                HorizontalLayout {
+                    height: 24px;
+                    Text {
+                        text: "Made with Slint";
+                        color: Palette.ink.transparentize(0.6);
+                        font-size: 10px;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Rectangle {
+                        width: 56px;
+                        border-radius: 12px;
+                        background: done.has-hover ? Palette.ink : Palette.ink.transparentize(0.1);
+                        Text {
+                            text: "Done";
+                            color: Palette.paper;
+                            font-size: 12px;
+                            font-weight: 400;
+                            horizontal-alignment: center;
+                            vertical-alignment: center;
+                        }
+                        done := TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                idle-focus.focus();
+                                root.settings-open = false;
+                                root.settings-done();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
