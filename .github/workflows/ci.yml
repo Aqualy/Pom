@@ -39,8 +39,9 @@ jobs:
             formats: nsis
           - os: ubuntu-latest
             formats: deb,appimage
+          # The dmg is assembled below so the app can be signed first.
           - os: macos-latest
-            formats: dmg
+            formats: app
     runs-on: ${{ matrix.os }}
     env:
       # linuxdeploy is itself an AppImage; this avoids needing FUSE on the runner.
@@ -53,6 +54,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo install cargo-packager --locked
       - run: cargo packager --release --formats ${{ matrix.formats }} --out-dir dist
+      # An unsigned bundle downloaded on Apple Silicon is reported as "damaged" and
+      # can't be opened at all. Ad-hoc signing seals the bundle, so Gatekeeper shows
+      # the regular "unidentified developer" prompt instead, which users can bypass.
+      - if: runner.os == 'macOS'
+        run: |
+          codesign --force --deep --sign - dist/Pom.app
+          codesign --verify --deep --strict dist/Pom.app
+          version=$(cargo pkgid | sed 's/.*[#@]//')
+          arch=$(uname -m | sed 's/arm64/aarch64/')
+          mkdir dmg-root
+          mv dist/Pom.app dmg-root/
+          ln -s /Applications dmg-root/Applications
+          hdiutil create -volname Pom -srcfolder dmg-root -format UDZO "dist/Pom_${version}_${arch}.dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ runner.os }}

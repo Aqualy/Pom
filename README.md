@@ -6,8 +6,9 @@ A minimalist Pomodoro timer for the desktop.
 
 Grab the installer for your platform from the [Releases](https://github.com/Aqualy/Pom/releases) page:
 `*-setup.exe` (Windows), `.deb` or `.AppImage` (Linux), `.dmg` (macOS, Apple Silicon).
-The builds are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn on first launch
-(on macOS, right-click the app and choose **Open**).
+The builds aren't notarized, so Windows SmartScreen and macOS Gatekeeper will warn on first launch.
+On macOS, open the app once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
+If macOS says the app is damaged (v0.1.1 and earlier), run `xattr -dr com.apple.quarantine /Applications/Pom.app`.
 
 ## Use
 
