@@ -16,7 +16,7 @@ pub fn fire(finished: Phase, volume: Option<u32>) {
     // Notification backends can block (D-Bus, macOS), so keep them off the UI thread.
     thread::spawn(move || {
         if let Err(e) = notify_rust::Notification::new()
-            .appname("Pomodoro")
+            .appname("Pom")
             .summary(summary)
             .body(body)
             .show()

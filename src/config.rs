@@ -77,7 +77,7 @@ impl Config {
 }
 
 fn path() -> Option<PathBuf> {
-    directories::ProjectDirs::from("", "", "Pomodoro").map(|d| d.config_dir().join("config.toml"))
+    directories::ProjectDirs::from("", "", "Pom").map(|d| d.config_dir().join("config.toml"))
 }
 
 #[cfg(test)]

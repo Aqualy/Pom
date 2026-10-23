@@ -1,7 +1,6 @@
-# Pomodoro
+# Pom
 
-A minimalist tomato timer for the desktop, after Enzo Mari's flat fruit prints.
-Pure Rust + [Slint](https://slint.dev), one small native binary.
+A minimalist Pomodoro timer for the desktop.
 
 ## Install
 
@@ -19,34 +18,22 @@ The builds are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn o
 - Drag anywhere outside the tomato to move the window.
 - In settings, type a value or hold − / + to change it quickly. The sound row has a volume slider and a ▶ preview.
 
-Settings live in the platform config dir (`%APPDATA%\Pomodoro\config\config.toml` on Windows,
-`~/Library/Application Support/Pomodoro/config.toml` on macOS, `~/.config/pomodoro/config.toml` on Linux).
-
-## Artwork
-
-The tomato comes from `tomato.svg`, embedded at compile time. It needs two `<path>`s,
-body first, then crown (a `translate` on the crown is honored), using absolute `M`/`L`/`C`/`Z` commands.
-The draining wedge is traced from the body outline, so swapping the SVG just works.
+Settings live in the platform config dir (`%APPDATA%\Pom\config\config.toml` on Windows,
+`~/Library/Application Support/Pom/config.toml` on macOS, `~/.config/pom/config.toml` on Linux).
 
 ## Build
 
 ```sh
-cargo run            # debug
+cargo run
 cargo test
-cargo build --release
+cargo packager --release --out-dir dist   # installers, needs cargo-packager
 ```
 
-Linux needs the usual Slint/ALSA/D-Bus dev packages (`libfontconfig1-dev libxkbcommon-dev libasound2-dev libdbus-1-dev`).
-
-Installers are built with [cargo-packager](https://github.com/crabnebula-dev/cargo-packager)
-(`cargo packager --release --out-dir dist`). CI tests on Windows, Linux and macOS for every push,
-then builds the installers; pushing a `v*` tag also publishes them as a GitHub release.
-The icons in `icons/` are rendered from the SVG by `python scripts/make_icons.py` (needs Pillow).
+Linux needs `libfontconfig1-dev libxkbcommon-dev libasound2-dev libdbus-1-dev`.
+CI tests on Windows, Linux and macOS and builds the installers; pushing a `v*` tag publishes a release.
 
 ## License
 
 MIT, see [LICENSE](LICENSE).
 
-## Credits
-
-Inter typeface by Rasmus Andersson (SIL OFL, `ui/fonts/LICENSE.txt`). Made with Slint (Royalty-free license).
+Inter typeface by Rasmus Andersson (SIL OFL, `ui/fonts/LICENSE.txt`). Made with [Slint](https://slint.dev) (Royalty-free license).
