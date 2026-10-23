@@ -1,4 +1,4 @@
-"""Renders the app icons in icons/ from tomato_crown_lowered.svg.
+"""Renders the app icons in icons/ from tomato.svg.
 
 Run from the repo root: python scripts/make_icons.py (needs Pillow).
 The SVG only uses absolute M/L/C/Z, so the paths are flattened here instead of
@@ -11,7 +11,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parent.parent
-SVG = ROOT / "tomato_crown_lowered.svg"
+SVG = ROOT / "tomato.svg"
 OUT = ROOT / "icons"
 
 PAPER = (0xF2, 0xEE, 0xE6, 255)
@@ -98,7 +98,6 @@ def main():
     for px in (32, 128, 256, 512):
         img.resize((px, px), Image.LANCZOS).save(OUT / f"{px}x{px}.png")
     full = img.resize((1024, 1024), Image.LANCZOS)
-    full.save(OUT / "icon.png")
     full.save(OUT / "icon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
     full.save(OUT / "icon.icns")
 

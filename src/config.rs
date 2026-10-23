@@ -48,10 +48,10 @@ impl Config {
         if let Some(dir) = path.parent() {
             let _ = std::fs::create_dir_all(dir);
         }
-        if let Ok(s) = toml::to_string_pretty(self) {
-            if let Err(e) = std::fs::write(&path, s) {
-                eprintln!("could not save settings to {}: {e}", path.display());
-            }
+        if let Ok(s) = toml::to_string_pretty(self)
+            && let Err(e) = std::fs::write(&path, s)
+        {
+            eprintln!("could not save settings to {}: {e}", path.display());
         }
     }
 

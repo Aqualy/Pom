@@ -6,7 +6,7 @@
 use std::f32::consts::TAU;
 use std::fmt::Write;
 
-const SVG: &str = include_str!("../tomato_crown_lowered.svg");
+const SVG: &str = include_str!("../tomato.svg");
 
 /// Angular resolution of the wedge outline.
 const SAMPLES: usize = 720;

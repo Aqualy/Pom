@@ -24,7 +24,7 @@ Settings live in the platform config dir (`%APPDATA%\Pomodoro\config\config.toml
 
 ## Artwork
 
-The tomato comes from `tomato_crown_lowered.svg`, embedded at compile time. It needs two `<path>`s,
+The tomato comes from `tomato.svg`, embedded at compile time. It needs two `<path>`s,
 body first, then crown (a `translate` on the crown is honored), using absolute `M`/`L`/`C`/`Z` commands.
 The draining wedge is traced from the body outline, so swapping the SVG just works.
 
@@ -42,6 +42,10 @@ Installers are built with [cargo-packager](https://github.com/crabnebula-dev/car
 (`cargo packager --release --out-dir dist`). CI tests on Windows, Linux and macOS for every push,
 then builds the installers; pushing a `v*` tag also publishes them as a GitHub release.
 The icons in `icons/` are rendered from the SVG by `python scripts/make_icons.py` (needs Pillow).
+
+## License
+
+MIT, see [LICENSE](LICENSE).
 
 ## Credits
 
